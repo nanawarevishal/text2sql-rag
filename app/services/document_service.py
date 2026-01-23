@@ -10,6 +10,7 @@ import tiktoken
 import logging
 from unstructured.partition.auto import partition
 from pathlib import Path
+from app.config import settings
 
 logger = logging.getLogger("rag_app.document_service")
 
@@ -146,6 +147,96 @@ def chunk_text(
     return chunks
 
 
+def chunk_text_semantic(
+    text: str,
+    chunk_size: int = 512,
+    encoding_name: str = "cl100k_base"
+) -> List[Dict[str, Any]]:
+    """
+    Split text into semantic chunks using semchunk library.
+
+    Better than token-based chunking because it:
+    - Respects sentence boundaries (no mid-sentence splits)
+    - Maintains semantic coherence
+    - Still lightweight (pure Python, no PyTorch)
+
+    Falls back to token-based chunking if semchunk unavailable.
+
+    Args:
+        text: The text to chunk
+        chunk_size: Maximum tokens per chunk (default: 512)
+        encoding_name: Tokenizer encoding to use (default: cl100k_base for GPT-4)
+
+    Returns:
+        List of dictionaries containing chunk metadata
+    """
+    # Initialize tokenizer
+    tokenizer = tiktoken.get_encoding(encoding_name)
+
+    try:
+        from semchunk import chunkerify
+
+        # Create chunker with tokenizer and chunk size
+        chunker = chunkerify(tokenizer, chunk_size=chunk_size)
+
+        # Use semchunk for semantic boundaries
+        semantic_chunks = chunker(text)
+
+        # Convert to standard format with metadata
+        chunks = []
+        char_position = 0
+
+        for idx, chunk_text in enumerate(semantic_chunks):
+            tokens = tokenizer.encode(chunk_text)
+
+            chunk_data = {
+                'text': chunk_text,
+                'chunk_index': idx,
+                'token_count': len(tokens),
+                'start_char': char_position,
+                'end_char': char_position + len(chunk_text),
+                # Add empty metadata for compatibility with Dockling format
+                'headings': [],
+                'page_numbers': [],
+                'doc_items': [],
+                'captions': []
+            }
+
+            chunks.append(chunk_data)
+            char_position += len(chunk_text)
+
+        logger.info(f"Semantic chunking complete: {len(chunks)} chunks (semchunk)")
+        return chunks
+
+    except ImportError:
+        logger.warning("semchunk not available, falling back to token-based chunking")
+        # Use the standard token-based chunking function
+        fallback_chunks = chunk_text(text, chunk_size=chunk_size, overlap=50)
+
+        # Add empty metadata for compatibility
+        for chunk in fallback_chunks:
+            chunk['headings'] = []
+            chunk['page_numbers'] = []
+            chunk['doc_items'] = []
+            chunk['captions'] = []
+
+        return fallback_chunks
+
+    except Exception as e:
+        logger.warning(f"Semantic chunking failed: {e}, falling back to token-based")
+        # Use the standard token-based chunking function
+        fallback_chunks = chunk_text(text, chunk_size=chunk_size, overlap=50)
+
+        # Add empty metadata for compatibility
+        for chunk in fallback_chunks:
+            chunk['headings'] = []
+            chunk['page_numbers'] = []
+            chunk['doc_items'] = []
+            chunk['captions'] = []
+
+        return fallback_chunks
+
+
 def get_document_stats(file_path: str) -> Dict[str, Any]:
     """
     Get statistics about a document.
@@ -202,18 +293,18 @@ def parse_and_chunk_with_context(file_path: str, chunk_size: int = 512, min_chun
     # This is critical for Lambda performance (Docling causes 30+ second timeout)
     file_extension = Path(file_path).suffix.lower()
     if file_extension in ['.txt', '.md', '.csv', '.log', '.json']:
-        logger.info(f"Using fast token-based chunking for {file_extension} file (bypassing Docling)")
+        logger.info(f"Using fast semantic chunking for {file_extension} file (bypassing Docling)")
         text = parse_document(file_path)  # Uses fast path internally
-        chunks = chunk_text(text, chunk_size=chunk_size, overlap=50)
+        chunks = chunk_text_semantic(text, chunk_size=chunk_size)
+        logger.info(f"Fast semantic chunking complete: {len(chunks)} chunks")
+        return chunks
 
-        # Add empty metadata fields for compatibility
-        for chunk in chunks:
-            chunk['headings'] = []
-            chunk['page_numbers'] = []
-            chunk['doc_items'] = []
-            chunk['captions'] = []
-
-        logger.info(f"Fast chunking complete: {len(chunks)} chunks")
+    # Check if Docling should be used (config flag)
+    if not settings.USE_DOCKLING:
+        logger.info(f"Docling disabled via config (USE_DOCKLING=false), using Unstructured + semchunk fallback")
+        text = parse_document(file_path)
+        chunks = chunk_text_semantic(text, chunk_size=chunk_size)
+        logger.info(f"Semantic chunking complete: {len(chunks)} chunks")
         return chunks
 
     try:
@@ -227,35 +318,15 @@ def parse_and_chunk_with_context(file_path: str, chunk_size: int = 512, min_chun
         return chunks
 
     except ImportError as e:
-        logger.warning(f"Docling not available, falling back to token-based chunking: {e}")
-
-        # Fallback to old method
+        logger.warning(f"Docling not available (import failed), falling back to semantic chunking: {e}")
         text = parse_document(file_path)
-        chunks = chunk_text(text, chunk_size=chunk_size, overlap=50)
-
-        # Add empty metadata fields for compatibility
-        for chunk in chunks:
-            chunk['headings'] = []
-            chunk['page_numbers'] = []
-            chunk['doc_items'] = []
-            chunk['captions'] = []
-
-        logger.info(f"Token-based chunking complete: {len(chunks)} chunks (no context)")
+        chunks = chunk_text_semantic(text, chunk_size=chunk_size)
+        logger.info(f"Semantic chunking complete: {len(chunks)} chunks")
         return chunks
 
     except Exception as e:
-        logger.error(f"Docling failed, falling back to token-based chunking: {e}")
-
-        # Fallback to old method
+        logger.error(f"Docling failed unexpectedly, falling back to semantic chunking: {e}")
         text = parse_document(file_path)
-        chunks = chunk_text(text, chunk_size=chunk_size, overlap=50)
-
-        # Add empty metadata fields for compatibility
-        for chunk in chunks:
-            chunk['headings'] = []
-            chunk['page_numbers'] = []
-            chunk['doc_items'] = []
-            chunk['captions'] = []
-
-        logger.warning(f"Using fallback chunking: {len(chunks)} chunks (no context)")
+        chunks = chunk_text_semantic(text, chunk_size=chunk_size)
+        logger.info(f"Semantic chunking complete: {len(chunks)} chunks")
         return chunks

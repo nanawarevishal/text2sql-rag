@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     MIN_CHUNK_SIZE: int = 256  # Minimum chunk size - smaller chunks will be merged
     CHUNK_OVERLAP: int = 50
 
+    # Document Processing Configuration
+    USE_DOCKLING: bool = True  # Set to False for ARM64 to avoid PyTorch/ONNX errors
+
     # Storage Backend Configuration
     STORAGE_BACKEND: str = "s3"  # Options: "local", "s3"
 
