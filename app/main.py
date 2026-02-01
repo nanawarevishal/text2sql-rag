@@ -609,10 +609,10 @@ async def get_stats():
                 "max_file_size": format_file_size(FileValidator.MAX_FILE_SIZE),
                 "cache_ttl": (
                     {
-                        "rag": f"{settings.CACHE_TTL_RAG}s",
-                        "embeddings": f"{settings.CACHE_TTL_EMBEDDINGS}s",
-                        "sql_generation": f"{settings.CACHE_TTL_SQL_GEN}s",
-                        "sql_results": f"{settings.CACHE_TTL_SQL_RESULT}s",
+                        "rag": int(f"{settings.CACHE_TTL_RAG}"),
+                        "embeddings": int(f"{settings.CACHE_TTL_EMBEDDINGS}"),
+                        "sql_generation": int(f"{settings.CACHE_TTL_SQL_GEN}"),
+                        "sql_results": int(f"{settings.CACHE_TTL_SQL_RESULT}"),
                     }
                     if query_cache_service and query_cache_service.enabled
                     else "disabled"
@@ -1372,10 +1372,10 @@ def initialize_services():
 # Event handlers for startup/shutdown
 # NOTE: Startup event disabled for Lambda (initialization handled in lambda_handler.py)
 # Uncomment for local development with uvicorn
-# @app.on_event("startup")
-# async def startup_event():
-#     """Execute tasks on application startup."""
-#     initialize_services()
+@app.on_event("startup")
+async def startup_event():
+    """Execute tasks on application startup."""
+    initialize_services()
 
 
 @app.on_event("shutdown")

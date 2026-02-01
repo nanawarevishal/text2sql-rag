@@ -1,0 +1,4 @@
+2026-01-31 19:53:54 - rag_app - ERROR - [main.py:1364] - ✗ Failed to initialize document cache service: Unknown storage backend: s3 # options: local, s3
+2026-01-31 20:18:25 - rag_app - ERROR - [main.py:1364] - ✗ Failed to initialize document cache service: Unknown storage backend: s3 # options: local, s3
+2026-01-31 20:20:02 - rag_app - ERROR - [main.py:1364] - ✗ Failed to initialize document cache service: Unknown storage backend: s3 # options: local, s3
+2026-01-31 22:30:35 - rag_app - ERROR - [main.py:1364] - ✗ Failed to initialize document cache service: Unknown storage backend: s3 # options: local, s3

@@ -5,6 +5,7 @@ Loads environment variables from .env file.
 
 import os
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import Optional
 
 
@@ -87,6 +88,24 @@ class Settings(BaseSettings):
     CACHE_TTL_SQL_GEN: int = 86400      # 24 hours - schema relatively stable
     CACHE_TTL_SQL_RESULT: int = 900     # 15 minutes - data changes frequently
 
+    @field_validator(
+        "VANNA_TEMPERATURE",
+        "VANNA_TOP_P",
+        "VANNA_SEED",
+        "VANNA_MAX_TOKENS",
+        "CACHE_TTL_EMBEDDINGS",
+        "CACHE_TTL_RAG",
+        "CACHE_TTL_SQL_GEN",
+        "CACHE_TTL_SQL_RESULT",
+        mode="before",
+    )
+    @classmethod
+    def strip_comments(cls, v):
+        """Strip inline comments from environment variable values."""
+        if isinstance(v, str):
+            # Remove inline comments (everything after #)
+            v = v.split("#")[0].strip()
+        return v
 
     @property
     def is_lambda(self) -> bool:
