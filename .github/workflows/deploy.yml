@@ -75,6 +75,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+            # --- START OF NECESSARY ADDITION ---
+      - name: Ensure ECR repository exists
+        run: |
+          echo "🔍 Checking if ECR repository '${{ env.ECR_REPOSITORY }}' exists..."
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} || \
+          (echo "🛠️ Repository not found. Creating repository '${{ env.ECR_REPOSITORY }}'..." && \
+          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }})
+          echo "✅ ECR repository is ready!"
+          echo ""
+      # --- END OF NECESSARY ADDITION ---
+
       - name: Verify AWS credentials
         run: |
           echo "✅ AWS credentials configured!"
