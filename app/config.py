@@ -84,9 +84,9 @@ class Settings(BaseSettings):
 
     # Cache TTL Configuration (in seconds)
     CACHE_TTL_EMBEDDINGS: int = 604800  # 7 days - embeddings are static
-    CACHE_TTL_RAG: int = 3600           # 1 hour - may change with new documents
-    CACHE_TTL_SQL_GEN: int = 86400      # 24 hours - schema relatively stable
-    CACHE_TTL_SQL_RESULT: int = 900     # 15 minutes - data changes frequently
+    CACHE_TTL_RAG: int = 3600  # 1 hour - may change with new documents
+    CACHE_TTL_SQL_GEN: int = 86400  # 24 hours - schema relatively stable
+    CACHE_TTL_SQL_RESULT: int = 900  # 15 minutes - data changes frequently
 
     @field_validator(
         "VANNA_TEMPERATURE",
