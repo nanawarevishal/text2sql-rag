@@ -27,10 +27,7 @@ COPY requirements.txt .
 # 2. Added --index-strategy unsafe-best-match to resolve index conflicts
 RUN --mount=from=uv,source=/uv,target=/bin/uv \
     --mount=type=cache,target=/root/.cache/uv \
-    uv pip install -r requirements.txt \
-    --index-strategy unsafe-best-match \
-    --target "${LAMBDA_TASK_ROOT}"
-# -----------------------
+    uv pip install -r requirements.txt --target "${LAMBDA_TASK_ROOT}" --index-strategy unsafe-best-match
 
 COPY app/ ${LAMBDA_TASK_ROOT}/app/
 COPY lambda_handler.py ${LAMBDA_TASK_ROOT}/
