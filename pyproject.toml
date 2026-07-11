@@ -147,6 +147,14 @@ exclude = [
 [tool.hatch.build.targets.wheel]
 packages = ["app", "data"]
 
+[tool.uv]
+# The PyTorch CPU wheel index (added via --extra-index-url in requirements.txt)
+# also happens to host an old `requests` package, which under uv's default
+# "first-index" strategy shadows the newer `requests` versions docling needs.
+# unsafe-best-match considers all indexes per-package instead of locking to
+# whichever index lists the package first.
+index-strategy = "unsafe-best-match"
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]
